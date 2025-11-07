@@ -26,19 +26,28 @@ export async function getGenres(req, res) {
   }
 }
 
+
+//Filter products by genre or return all products if genre is specified or Get all products from the database 
 export async function getProducts(req, res) {
 
   try {
 
     const db = await getDBConnection()
 
-    let sqlQuery = 'SELECT * FROM products'
+    let query = 'SELECT * FROM products'
 
-    const products = await db.all(sqlQuery)
+    let queryParams = []
+
+    if (req.query.genre) {
+      query = 'SELECT * FROM products WHERE  genre = ?'
+      queryParams = [req.query.genre]
+    }
+ 
+
+    const products = await db.all(query, queryParams)
 
     res.json(products)
 
-    await db.close()
 
   } catch (err) {
 
