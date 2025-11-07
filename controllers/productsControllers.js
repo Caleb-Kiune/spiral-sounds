@@ -27,27 +27,53 @@ export async function getGenres(req, res) {
 }
 
 
-//Filter products by genre or return all products if genre is specified or Get all products from the database 
+//Filter products by genre or return all products 
+//search functionality
+//if genre is specified Get all products from the database 
 export async function getProducts(req, res) {
 
-  try {
+ try {
+    const db = await getDBConnection();
 
-    const db = await getDBConnection()
+    let query = 'SELECT * FROM products';
+    let params = [];
 
-    let query = 'SELECT * FROM products'
+    const { genre, search } = req.query;
 
-    let queryParams = []
+    // WHERE clause will go here
+    let whereConditions = [];
 
-    if (req.query.genre) {
-      query = 'SELECT * FROM products WHERE  genre = ?'
-      queryParams = [req.query.genre]
+    // 1. Genre filter
+    if (genre) {
+      whereConditions.push('genre = ?');
+      params.push(genre);
     }
- 
 
-    const products = await db.all(query, queryParams)
+    // 2. Search filter (title, artist, OR genre)
+    if (search) {
+      // LIKE with %wildcards% = partial match
+      whereConditions.push(`(
+        title LIKE ? OR
+        artist LIKE ? OR
+        genre LIKE ?
+      )`);
+      const searchPattern = `%${search}%`;
+      params.push(searchPattern, searchPattern, searchPattern);
+    }
 
-    res.json(products)
+    // 3. Combine all WHERE conditions
+    if (whereConditions.length > 0) {
+      query += ' WHERE ' + whereConditions.join(' AND ');
+    }
 
+    console.log('Final SQL:', query);
+    console.log('Params:', params);
+
+    // 4. Run the magic query
+    const products = await db.all(query, params);
+
+    res.json(products);
+    await db.close();
 
   } catch (err) {
 
